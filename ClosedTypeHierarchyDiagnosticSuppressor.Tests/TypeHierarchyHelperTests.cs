@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using NUnit.Framework;
 using SvSoft.Analyzers.ClosedTypeHerarchyDiagnosticSuppression;
 using System;
@@ -13,9 +13,9 @@ namespace MyCode
 {{
 {code}
 }}
-";    
+";
 
-    static INamedTypeSymbol GetRootTypeCandidate(string typeCode, string typeName)
+    static (INamedTypeSymbol Type, Compilation Compilation) GetRootTypeCandidate(string typeCode, string typeName)
     {
         var completeCode = WrapInNamespace(typeCode);
         Compilation compilation = CompilationHelper.CreateCompilation(completeCode);
@@ -23,14 +23,14 @@ namespace MyCode
             .OfType<INamedTypeSymbol>()
             .Single();
 
-        return t;
+        return (t, compilation);
     }
 
     [Test]
     [TestCaseSource(nameof(ClosedSamples))]
     public void When_type_hierarchy_is_closed_Then_returns_leaf_types(string typeCode, string[] expectedSubTypes)
     {
-        INamedTypeSymbol type = GetRootTypeCandidate(typeCode, "Root");
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
         var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false);
 
@@ -42,7 +42,7 @@ namespace MyCode
     [TestCaseSource(nameof(NotClosedSamples))]
     public void When_type_hierarchy_is_not_closed_Then_returns_null(string typeCode, bool allowProtectedCopyCtors)
     {
-        INamedTypeSymbol type = GetRootTypeCandidate(typeCode, "Root");
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
         var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: allowProtectedCopyCtors);
 
@@ -53,7 +53,7 @@ namespace MyCode
     [TestCaseSource(nameof(ProtectedCopyConstructorOnlySamples))]
     public void When_type_hierarchy_is_closed_except_for_copy_ctor_And_copy_ctor_is_not_explicitly_allowed_Then_returns_null(string typeCode, string[] _)
     {
-        INamedTypeSymbol type = GetRootTypeCandidate(typeCode, "Root");
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
         var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false);
 
@@ -64,7 +64,7 @@ namespace MyCode
     [TestCaseSource(nameof(ProtectedCopyConstructorOnlySamples))]
     public void When_type_hierarchy_is_closed_except_for_copy_ctor_And_copy_ctor_is_explicitly_allowed_Then_returns_leaf_types(string typeCode, string[] expectedSubTypes)
     {
-        INamedTypeSymbol type = GetRootTypeCandidate(typeCode, "Root");
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
         var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, true);
 
