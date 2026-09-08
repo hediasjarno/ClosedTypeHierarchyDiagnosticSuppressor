@@ -72,11 +72,35 @@ namespace MyCode
         Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(expectedSubTypes));
     }
 
+    [Test]
+    public void When_type_hierarchy_is_closed_sibling_form_with_private_protected_ctor_Then_returns_leaf_types()
+    {
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(TypeHierarchies.Closed.SiblingPrivateProtected, "Root");
+
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: false);
+
+        Assert.That(subtypes, Is.Not.Null);
+        Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(new[] { "Leaf1", "Leaf2" }));
+    }
+
+    [Test]
+    public void When_type_hierarchy_is_closed_sibling_record_form_with_private_protected_ctor_And_copy_ctor_allowed_Then_returns_leaf_types()
+    {
+        (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(TypeHierarchies.Closed.SiblingPrivateProtectedRecord, "Root");
+
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: true);
+
+        Assert.That(subtypes, Is.Not.Null);
+        Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(new[] { "Leaf1", "Leaf2" }));
+    }
+
     public static readonly IEnumerable<TestCaseData> ClosedSamples = new (string SampleName, string TypeCode, string[] ExpectedTypeNames)[]
     {
         ("Simple", TypeHierarchies.Closed.Simple, new[] { "Leaf1", "Leaf2" }),
         ("Nested", TypeHierarchies.Closed.Nested, new[] { "Leaf1", "Leaf2", "Leaf3" }),
-        ("Generic", TypeHierarchies.Closed.Generic, new[] { "Leaf1", "Leaf2" })
+        ("Generic", TypeHierarchies.Closed.Generic, new[] { "Leaf1", "Leaf2" }),
+        ("NestedPrivateProtected", TypeHierarchies.Closed.NestedPrivateProtected, new[] { "Leaf1", "Leaf2" }),
+        ("NestedPrivateProtectedCopyCtorShaped", TypeHierarchies.Closed.NestedPrivateProtectedCopyCtorShaped, new[] { "Leaf1", "Leaf2" })
     }.Select(t => new TestCaseData(t.TypeCode, t.ExpectedTypeNames).SetArgDisplayNames(t.SampleName));
 
     public static readonly IEnumerable<TestCaseData> ProtectedCopyConstructorOnlySamples = new (string SampleName, string TypeCode, string[] ExpectedTypeNames)[]

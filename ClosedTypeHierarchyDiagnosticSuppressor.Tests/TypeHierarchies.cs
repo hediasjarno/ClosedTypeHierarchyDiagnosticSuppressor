@@ -1,4 +1,4 @@
-﻿namespace ClosedTypeHierarchyDiagnosticSuppressor.Tests;
+namespace ClosedTypeHierarchyDiagnosticSuppressor.Tests;
 static class TypeHierarchies
 {
     public static class Closed
@@ -38,6 +38,45 @@ abstract class Root<T>
     public T Value { get; }
 }
 ";
+
+        public const string NestedPrivateProtected = @"
+abstract class Root
+{
+    private protected Root() {}
+    public sealed class Leaf1 : Root {}
+    public sealed class Leaf2 : Root {}
+}
+";
+
+        public const string NestedPrivateProtectedCopyCtorShaped = @"
+abstract class Root
+{
+    private protected Root(Root root) {}
+    public sealed record Leaf1 : Root {}
+    public sealed record Leaf2 : Root {}
+}
+";
+
+        public const string SiblingPrivateProtected = @"
+abstract class Root
+{
+    private protected Root() {}
+}
+
+sealed class Leaf1 : Root {}
+sealed class Leaf2 : Root {}
+";
+
+        public const string SiblingPrivateProtectedRecord = @"
+abstract record Root
+{
+    private protected Root() {}
+}
+
+sealed record Leaf1 : Root;
+sealed record Leaf2 : Root;
+";
+
         public const string Deconstruct = @"
 abstract class Root
 {
@@ -72,7 +111,7 @@ abstract class Root
 
 static class RootExtensions
 {
-    public static void Deconstruct(this Root.Leaf1 leaf1, out object value, out string s, out object otherValue) 
+    public static void Deconstruct(this Root.Leaf1 leaf1, out object value, out string s, out object otherValue)
     {
         value = leaf1.Value;
         s = leaf1.S;
@@ -105,15 +144,6 @@ class Root
 }
 ";
 
-        public const string CtorNotPrivate = @"
-abstract class Root
-{
-    private protected Root() {}
-    public sealed class Leaf1 : Root {}
-    public sealed class Leaf2 : Root {}
-}
-";
-
         public const string ProtectedCtorOtherThanCopyConstructor = @"
 abstract class Root
 {
@@ -131,15 +161,6 @@ abstract class Root
     public sealed class Leaf2 : Root {}
 }
 ";
-
-        public const string ExplicitPrivateProtectedCopyCtor = @"
-    abstract class Root
-    {
-        private protected Root(Root root) {}
-        public sealed record Leaf1 : Root {}
-        public sealed record Leaf2 : Root {}
-    }
-    ";
 
         public const string ExplicitProtectedCopyCtor = @"
     abstract class Root

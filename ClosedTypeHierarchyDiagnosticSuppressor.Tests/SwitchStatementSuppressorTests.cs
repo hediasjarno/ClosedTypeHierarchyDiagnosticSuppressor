@@ -592,4 +592,46 @@ static class SwitchTest
 
         return EnsureNotSuppressed(code, NullableContextOptions.Disable);
     }
+
+    [Test]
+    public Task When_type_hierarchy_is_sibling_form_with_private_protected_ctor_And_all_subtypes_matched_Then_suppress()
+    {
+        var code = CodeHelper.WrapInNamespace(TypeHierarchies.Closed.SiblingPrivateProtected + @"
+static class SwitchTest
+{
+    public static void DoSwitch(Root root)
+    {
+        switch(root)
+        {
+            case Leaf1:
+                break;
+            case Leaf2:
+                break;
+        }
+    }
+}
+");
+
+        return EnsureSuppressed(code, NullableContextOptions.Enable);
+    }
+
+    [Test]
+    public Task When_type_hierarchy_is_sibling_form_with_private_protected_ctor_And_a_subtype_is_unmatched_Then_do_not_suppress()
+    {
+        var code = CodeHelper.WrapInNamespace(TypeHierarchies.Closed.SiblingPrivateProtected + @"
+static class SwitchTest
+{
+    public static void DoSwitch(Root root)
+    {
+        switch(root)
+        {
+            case Leaf1:
+                break;
+        }
+    }
+}
+");
+
+        return EnsureNotSuppressed(code, NullableContextOptions.Enable);
+    }
 }
