@@ -10,8 +10,6 @@ public static class TypeHierarchyHelper
 {
     public static IEnumerable<INamedTypeSymbol>? InterpretAsClosedTypeHierarchy(INamedTypeSymbol typeSymbol, bool allowRecords, Compilation compilation)
     {
-        IReadOnlyCollection<INamedTypeSymbol> allNamedTypes = GetAllNamedTypes(compilation);
-
         if (!IsPartOfClosedHierarchy(typeSymbol))
         {
             return null;
@@ -61,7 +59,7 @@ public static class TypeHierarchyHelper
                 return nestedSubtypes;
             }
 
-            var siblingSubtypes = allNamedTypes.Where(t =>
+            var siblingSubtypes = GetAllNamedTypes(compilation).Where(t =>
                 baseType.Equals(t.BaseType, SymbolEqualityComparer.Default) &&
                 !nestedSubtypes.Any(n => SymbolEqualityComparer.Default.Equals(n, t)));
 
