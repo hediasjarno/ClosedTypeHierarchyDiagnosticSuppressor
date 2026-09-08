@@ -1,6 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace SvSoft.Analyzers.ClosedTypeHerarchyDiagnosticSuppression;
 
@@ -8,7 +10,7 @@ public static class TypeHierarchyHelper
 {
     public static IEnumerable<INamedTypeSymbol>? InterpretAsClosedTypeHierarchy(INamedTypeSymbol typeSymbol, bool allowRecords, Compilation compilation)
     {
-        _ = compilation;
+        IReadOnlyCollection<INamedTypeSymbol> allNamedTypes = GetAllNamedTypes(compilation);
 
         if (!IsPartOfClosedHierarchy(typeSymbol))
         {
@@ -21,8 +23,7 @@ public static class TypeHierarchyHelper
         {
             if (CanBeClosedHierarchyRoot(typeSymbol))
             {
-                var nestedTypes = typeSymbol.GetMembers().OfType<INamedTypeSymbol>();
-                var subtypes = nestedTypes.Where(t => typeSymbol.Equals(t.BaseType, SymbolEqualityComparer.Default));
+                var subtypes = GetDirectSubtypes(typeSymbol);
 
                 return subtypes.All(IsPartOfClosedHierarchy);
             }
@@ -34,15 +35,11 @@ public static class TypeHierarchyHelper
         {
             if (CanBeClosedHierarchyRoot(typeSymbol))
             {
-                var nestedTypes = typeSymbol.GetMembers().OfType<INamedTypeSymbol>();
-                foreach (var nestedType in nestedTypes)
+                foreach (var subtype in GetDirectSubtypes(typeSymbol))
                 {
-                    if (typeSymbol.Equals(nestedType.BaseType, SymbolEqualityComparer.Default))
+                    foreach (var concreteType in GetConcreteSubtypes(subtype))
                     {
-                        foreach (var concreteType in GetConcreteSubtypes(nestedType))
-                        {
-                            yield return concreteType;
-                        }
+                        yield return concreteType;
                     }
                 }
             }
@@ -53,19 +50,40 @@ public static class TypeHierarchyHelper
             }
         }
 
+        IEnumerable<INamedTypeSymbol> GetDirectSubtypes(INamedTypeSymbol baseType)
+        {
+            var nestedSubtypes = baseType.GetMembers().OfType<INamedTypeSymbol>()
+                .Where(t => baseType.Equals(t.BaseType, SymbolEqualityComparer.Default))
+                .ToArray();
+
+            if (baseType.IsGenericType)
+            {
+                return nestedSubtypes;
+            }
+
+            var siblingSubtypes = allNamedTypes.Where(t =>
+                baseType.Equals(t.BaseType, SymbolEqualityComparer.Default) &&
+                !nestedSubtypes.Any(n => SymbolEqualityComparer.Default.Equals(n, t)));
+
+            return nestedSubtypes.Concat(siblingSubtypes);
+        }
+
         bool CanBeClosedHierarchyRoot(INamedTypeSymbol rootCandidate) =>
             rootCandidate.IsAbstract &&
             (allowRecords
-                ? HasOnlyPrivateConstructorsAndProtectedCopyCtors(rootCandidate)
-                : HasOnlyPrivateConstructors(rootCandidate));
+                ? HasOnlyClosingConstructorsAndProtectedCopyCtors(rootCandidate)
+                : HasOnlyClosingConstructors(rootCandidate));
 
-        static bool HasOnlyPrivateConstructors(INamedTypeSymbol rootCandidate) =>
-            rootCandidate.Constructors.All(c => c.DeclaredAccessibility == Accessibility.Private);
+        static bool HasOnlyClosingConstructors(INamedTypeSymbol rootCandidate) =>
+            rootCandidate.Constructors.All(c => IsClosingAccessibility(c.DeclaredAccessibility));
 
-        static bool HasOnlyPrivateConstructorsAndProtectedCopyCtors(INamedTypeSymbol rootCandidate) =>
-            HasOnlyPrivateConstructors(rootCandidate) ||
+        static bool IsClosingAccessibility(Accessibility accessibility) =>
+            accessibility is Accessibility.Private or Accessibility.ProtectedAndInternal;
+
+        static bool HasOnlyClosingConstructorsAndProtectedCopyCtors(INamedTypeSymbol rootCandidate) =>
+            HasOnlyClosingConstructors(rootCandidate) ||
             (IsRecord(rootCandidate) &&
-            rootCandidate.Constructors.All(c => c.DeclaredAccessibility == Accessibility.Private || MatchesImplicitlyCreatedRecordCopyCtor(rootCandidate, c)));
+            rootCandidate.Constructors.All(c => IsClosingAccessibility(c.DeclaredAccessibility) || MatchesImplicitlyCreatedRecordCopyCtor(rootCandidate, c)));
 
 #pragma warning disable CS0162 // Unreachable code detected, FP, see https://github.com/dotnet/roslyn/issues/41429
         const string CompilerCreatedCloneMethodNameOnRecordTypes = "<Clone>$";
@@ -80,5 +98,30 @@ public static class TypeHierarchyHelper
             ctor.Parameters[0].Type.Equals(constructedType, SymbolEqualityComparer.Default);
 
         static bool CanBeClosedHierarchyLeaf(INamedTypeSymbol typeSymbol) => typeSymbol.IsSealed;
+    }
+
+    static readonly ConditionalWeakTable<Compilation, IReadOnlyCollection<INamedTypeSymbol>> AllNamedTypesByCompilation = new();
+
+    static IReadOnlyCollection<INamedTypeSymbol> GetAllNamedTypes(Compilation compilation) =>
+        AllNamedTypesByCompilation.GetValue(compilation, ComputeAllNamedTypes);
+
+    static IReadOnlyCollection<INamedTypeSymbol> ComputeAllNamedTypes(Compilation compilation)
+    {
+        var result = new List<INamedTypeSymbol>();
+
+        foreach (SyntaxTree tree in compilation.SyntaxTrees)
+        {
+            SemanticModel model = compilation.GetSemanticModel(tree);
+
+            foreach (TypeDeclarationSyntax typeDeclaration in tree.GetRoot().DescendantNodesAndSelf().OfType<TypeDeclarationSyntax>())
+            {
+                if (model.GetDeclaredSymbol(typeDeclaration) is INamedTypeSymbol symbol)
+                {
+                    result.Add(symbol);
+                }
+            }
+        }
+
+        return result;
     }
 }
