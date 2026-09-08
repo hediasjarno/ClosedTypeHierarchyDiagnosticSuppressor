@@ -32,7 +32,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false, compilation);
 
         Assert.That(subtypes, Is.Not.Null);
         Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(expectedSubTypes));
@@ -44,7 +44,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: allowProtectedCopyCtors);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: allowProtectedCopyCtors, compilation);
 
         Assert.That(subtypes, Is.Null);
     }
@@ -55,7 +55,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, false, compilation);
 
         Assert.That(subtypes, Is.Null);
     }
@@ -66,7 +66,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(typeCode, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, true);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, true, compilation);
 
         Assert.That(subtypes, Is.Not.Null);
         Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(expectedSubTypes));
@@ -77,7 +77,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(TypeHierarchies.Closed.SiblingPrivateProtected, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: false);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: false, compilation);
 
         Assert.That(subtypes, Is.Not.Null);
         Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(new[] { "Leaf1", "Leaf2" }));
@@ -88,7 +88,7 @@ namespace MyCode
     {
         (INamedTypeSymbol type, Compilation compilation) = GetRootTypeCandidate(TypeHierarchies.Closed.SiblingPrivateProtectedRecord, "Root");
 
-        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: true);
+        var subtypes = TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(type, allowRecords: true, compilation);
 
         Assert.That(subtypes, Is.Not.Null);
         Assert.That(subtypes!.Select(s => s.Name), Is.EquivalentTo(new[] { "Leaf1", "Leaf2" }));

@@ -50,7 +50,7 @@ public sealed class SwitchStatementSuppressor : DiagnosticSuppressor
                     return;
                 }
 
-                if (TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(switcheeType, allowRecords) is not IEnumerable<INamedTypeSymbol> subtypes)
+                if (TypeHierarchyHelper.InterpretAsClosedTypeHierarchy(switcheeType, allowRecords, context.Compilation) is not IEnumerable<INamedTypeSymbol> subtypes)
                 {
                     return;
                 }

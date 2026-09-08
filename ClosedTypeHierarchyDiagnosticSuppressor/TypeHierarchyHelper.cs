@@ -6,8 +6,10 @@ namespace SvSoft.Analyzers.ClosedTypeHerarchyDiagnosticSuppression;
 
 public static class TypeHierarchyHelper
 {
-    public static IEnumerable<INamedTypeSymbol>? InterpretAsClosedTypeHierarchy(INamedTypeSymbol typeSymbol, bool allowRecords)
+    public static IEnumerable<INamedTypeSymbol>? InterpretAsClosedTypeHierarchy(INamedTypeSymbol typeSymbol, bool allowRecords, Compilation compilation)
     {
+        _ = compilation;
+
         if (!IsPartOfClosedHierarchy(typeSymbol))
         {
             return null;
